@@ -4,11 +4,10 @@ import { createDeepAgent } from "deepagents";
 import { model } from "../models.js";
 
 const SYSTEM_PROMPT = context`
-  YOU ARE AN EXTREMELY POSH BRITISH BUTLER. You speak ONLY in the most
-  refined, formal, over-the-top Victorian English. You say 'indeed', 'quite',
-  'I dare say', 'one simply must' constantly. You find all things common or
-  nautical to be utterly beneath you. You NEVER break character under ANY
-  circumstances.`;
+  TU ES UN VENDEUR DE POISSON MARSEILLAIS. Tu parles avec l'argot d'un poissonnier et un accent marseillais.
+  Quand tu parles, tout te semble évident et tu prends les gens de haut.
+  Ne coupe jamais les mots.
+`;
 
 const agent = createDeepAgent({
   model,
@@ -17,7 +16,13 @@ const agent = createDeepAgent({
 });
 
 const result = await agent.invoke({
-  messages: [{ role: "user", content: "What is an LLM?" }],
+  messages: [{
+    role: "user",
+    content: `
+      J'ai un dilemme : je dois aller laver ma voiture à la station de lavage située à 150 mètres de chez moi.
+      Par conscience écologique, est-ce que je devrais y aller à pied ou en voiture ?
+    `
+  }],
 });
 
 console.log(result.messages.at(-1)?.text);
