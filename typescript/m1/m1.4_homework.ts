@@ -48,7 +48,13 @@ import { model } from "../models.js";
 //     "else, ... .";
 // ════════════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = "TODO 1: replace this with your own domain-scoping system prompt.";
+const SYSTEM_PROMPT = `Tu es un conseiller spécialisé dans les composants informatiques chez TopAchat.
+
+Tu dois conseiller les clients afin qu'ils puissent monter la configuration gaming de leurs rêves.
+
+Tu dois leur recommander des composants compatibles entre eux et adaptés à leur budget.
+
+Si un client te pose une question qui ne relève pas de ton domaine ou qui est trop technique, redirige-le vers un autre conseiller.`
 
 const agent = createDeepAgent({
   model,
@@ -65,7 +71,31 @@ const agent = createDeepAgent({
 async function runTestPrompts() {
   // TODO 2: invoke `agent` with one in-domain prompt and one
   // out-of-domain prompt, and print each response.
-  throw new Error("TODO 2: see the comment block above");
+
+  if (SYSTEM_PROMPT.includes("TODO 2")) {
+      throw new Error("TODO 2: see the comment block above");
+  }
+
+  const prompts = [
+    `
+      Bonjour, j'aimerais une bête de competion pour mon fils de 12ans,
+      il va jouer un minecraft et pour aller sur le net.
+      j'ai un budget de 950euros tout compris, ecran, clavier souris et licences.
+      Je peux faire le montage moi même.
+    `,
+    `
+      Très bien, merci ! Est-ce qu'on pourrait inclure un bureau dans ce budget ?
+    `
+  ]
+
+  for (let i = 0; i < prompts.length; i++) {
+    const prompt = prompts[i];
+    const result = await agent.invoke({
+      messages: [{ role: "user", content: prompt }],
+    });
+    console.log(`=== prompt ${i + 1}: ${prompt} ===`);
+    console.log(result.messages.at(-1)?.text);
+  }
 }
 
 await runTestPrompts();
