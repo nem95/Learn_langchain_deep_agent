@@ -54,14 +54,27 @@ import { model } from "../models.js";
 //   );
 // ════════════════════════════════════════════════════════════════════════
 
-const yourCustomTool = tool(
-  ({ query }) => {
-    throw new Error("TODO 1: see the comment block above");
+const investmentsNewsTool = tool(
+  async ({ period }) => {
+    try {
+      console.log("period", period);
+
+      const response = await fetch(
+        `https://api-production-3ee5.up.railway.app/api/investment/${period}`
+      );
+      const data = await response.json();
+      console.log(data.primaryMarket.en[0]);
+
+      return data.primaryMarket.en[0].content;
+    } catch (error) {
+      console.error(error);
+      throw new Error(`Erro during api fetch: ${error}`);
+    }
   },
   {
-    name: "your_custom_tool",
-    description: "TODO 1: replace this description and body with your own tool.",
-    schema: z.object({ query: z.string() }),
+    name: "investments_news_tool",
+    description: "Fetch latest investissment news for a given period",
+    schema: z.object({ period: z.string() }),
   }
 );
 
@@ -74,11 +87,16 @@ const yourCustomTool = tool(
 // readSql.
 // ════════════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = "TODO 2: replace this with your own system prompt.";
+const SYSTEM_PROMPT = `
+  As an investment analyst, give us the latest investment news and wich one we should look
+  to invest on.
+
+  the API:  Period IDs use the format YYYY-MM-DD (daily).
+`;
 
 // Guards against running with an unfilled placeholder; the filled
 // reference doesn't need this since there's no placeholder text left.
-if (yourCustomTool.description.includes("TODO 1")) {
+if (investmentsNewsTool.description.includes("TODO 1")) {
   throw new Error("TODO 1: see the comment block above");
 }
 if (SYSTEM_PROMPT.includes("TODO 2")) {
@@ -88,12 +106,12 @@ if (SYSTEM_PROMPT.includes("TODO 2")) {
 const agent = createDeepAgent({
   model,
   name: "Homework_Agent",
-  tools: [yourCustomTool],
+  tools: [investmentsNewsTool],
   systemPrompt: SYSTEM_PROMPT,
 });
 
 const result = await agent.invoke({
-  messages: [{ role: "user", content: "Ask your agent a question that needs your tool." }],
+  messages: [{ role: "user", content: `Give me the lastest investments news for yesterday, today is: ${new Date()}` }],
 });
 
 console.log(result.messages.at(-1)?.text);

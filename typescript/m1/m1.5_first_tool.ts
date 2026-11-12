@@ -19,7 +19,7 @@ const agent = createDeepAgent({
 });
 
 const result = await agent.invoke({
-  messages: [{ role: "user", content: "Roll a 20-sided die for me." }],
+  messages: [{ role: "user", content: "Roll a 20-sided die 10 time for me and do the average evolution with a table." }],
 });
 
 for (const message of result.messages) {
