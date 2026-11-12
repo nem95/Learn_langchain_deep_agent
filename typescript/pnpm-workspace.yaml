@@ -2,3 +2,6 @@ allowBuilds:
   canvas: true
   esbuild: true
   node: true
+minimumReleaseAgeExclude:
+  - '@langchain/core@1.4.0'
+  - 'langchain@1.6.5'
