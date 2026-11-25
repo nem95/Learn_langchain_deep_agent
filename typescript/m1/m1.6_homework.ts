@@ -32,6 +32,7 @@ import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { createDeepAgent } from "deepagents";
 
 import { model } from "../models.js";
+import { tool } from "@langchain/core/tools";
 
 // ════════════════════════════════════════════════════════════════════════
 // TODO 1: Build your MCP client and return its filtered tool list.
@@ -61,10 +62,56 @@ type BuiltTools = {
   tools: Awaited<ReturnType<MultiServerMCPClient["getTools"]>>;
 };
 
-async function buildTools(): Promise<BuiltTools> {
-  // TODO 1: build a MultiServerMCPClient, fetch its tools, filter them,
-  // and return { client, tools }.
-  throw new Error("TODO 1: see the comment block above");
+function toText(out: unknown): string {
+  if (typeof out === "string") return out;
+  if (Array.isArray(out)) {
+    return out
+      .map((b: any) =>
+        b?.type === "text"
+          ? b.text
+          : `[${b?.type}] ${b?.url ?? b?.uri ?? b?.name ?? JSON.stringify(b)}`
+      )
+      .join("\n");
+  }
+  return JSON.stringify(out);
+}
+
+async function buildTools() {
+  const client = new MultiServerMCPClient({
+    coworkingview: {
+      transport: "http",
+      url: "https://mcp.coworkingview.com/mcp",
+    },
+  });
+
+  const allTools = await client.getTools();
+
+  const ALLOWED = new Set(["resolve_coworking_query", "search_coworking_spaces"]);
+
+  const tools = allTools
+  .filter((t) => ALLOWED.has(t.name))
+  .map((t) =>
+    tool(
+      async (input: Record<string, unknown>) => {
+        const args = { ...input };
+        if (!args.cursor || typeof args.cursor !== "string" || args.cursor.length < 10) {
+          delete args.cursor;
+        }
+        try {
+          return toText(await t.invoke(args));
+        } catch (e) {
+          return `Tool error: ${(e as Error).message}`;
+        }
+      },
+      {
+        name: t.name,
+        description: t.description,
+        schema: t.schema,
+      }
+    )
+  );
+
+  return { client, tools };
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -72,9 +119,19 @@ async function buildTools(): Promise<BuiltTools> {
 // not Lab 1's "what is MCP..." question.
 // ════════════════════════════════════════════════════════════════════════
 
-const QUESTION = "TODO 2: replace with a question that puts your chosen tool(s) to work.";
+const QUESTION = `
+  I would like to find 5 coworking space in Paris
+  I want the less expensive ones
+  Give me the list as a table with the name, the address , the price, for private office and coworking desk
+`;
 
 const { client, tools } = await buildTools();
+
+console.log(`\ncoworking-view-mcp: ${tools.length} tool(s)`);
+for (const t of tools) {
+  console.log(`  ${t.name}`);
+  console.log(`  ${t.description?.slice(0, 90)}`);
+}
 
 try {
   const agent = createDeepAgent({ model, tools });
@@ -84,6 +141,8 @@ try {
   });
 
   console.log(result.messages.at(-1)?.text);
+} catch(error) {
+  console.log(`ERROR : ${error}`);
 } finally {
   await client.close();
 }
