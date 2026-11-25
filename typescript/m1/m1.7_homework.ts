@@ -28,10 +28,26 @@ import { MemorySaver } from "@langchain/langgraph";
 import { createDeepAgent } from "deepagents";
 
 import { model } from "../models.js";
+import * as readline from 'node:readline/promises';
+import { context } from "langchain";
 
+const SYSTEM_PROMPT = context`
+  When you answer or you ask for a question, be short.
+  When you answer, give juste 1 line.
+  Do not add emoji's
+`;
+
+const BASE_QUESTION = "What is my favourite car ?"
 const agent = createDeepAgent({
   model,
+  systemPrompt: SYSTEM_PROMPT,
   checkpointer: new MemorySaver(),
+});
+
+const freshAgent = createDeepAgent({
+  model,
+  systemPrompt: SYSTEM_PROMPT,
+  checkpointer: new MemorySaver()
 });
 
 // ════════════════════════════════════════════════════════════════════════
@@ -44,8 +60,8 @@ const agent = createDeepAgent({
 //     const threadA = { configurable: { thread_id: "my-thread-a" } };
 // ════════════════════════════════════════════════════════════════════════
 
-const threadA = null; // TODO 1: replace with your own thread config
-const threadB = null; // TODO 1: replace with your own thread config
+const threadA = { configurable: { thread_id: "first-thread" } };
+const threadB = { configurable: { thread_id: "second-thread" } };
 
 // ════════════════════════════════════════════════════════════════════════
 // TODO 2: Run the turns that demonstrate persistence, isolation, and
@@ -73,7 +89,56 @@ const threadB = null; // TODO 1: replace with your own thread config
 
 async function runScenario() {
   // TODO 2: run the multi-turn, multi-thread scenario described above.
-  throw new Error("TODO 2: see the comment block above");
+
+  let result = await agent.invoke(
+    { messages: [{ role: "user", content: "I like sports cars" }] },
+    threadA
+  );
+  console.log("\nThread A, turn 1:");
+  console.log(result.messages.at(-1)?.text);
+
+  result = await agent.invoke(
+    { messages: [{ role: "user", content: "Ask me wich one is my favourite" }] },
+    threadA
+  );
+  console.log("\nThread A, turn 2:");
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  // QUESTION
+  const answer = await rl.question(`${result.messages.at(-1)?.text}`);
+  result = await agent.invoke(
+    { messages: [{ role: "user", content: answer }] },
+    threadA
+  );
+  console.log("\nThread A, turn 3:");
+  console.log(result.messages.at(-1)?.text);
+  rl.close();
+
+  result = await agent.invoke(
+    { messages: [{ role: "user", content: BASE_QUESTION }] },
+    threadA
+  );
+  console.log("\nThread A, turn 4:");
+  console.log(result.messages.at(-1)?.text);
+
+  result = await agent.invoke(
+    { messages: [{ role: "user", content: BASE_QUESTION }] },
+    threadB
+  );
+  console.log("\nThread B, turn 1:");
+  console.log(result.messages.at(-1)?.text);
+
+  result = await freshAgent.invoke(
+    { messages: [{ role: "user", content: BASE_QUESTION }] },
+    threadA
+  );
+
+  console.log("\nFresh Agent on Thread 1, turn 1:");
+  console.log(result.messages.at(-1)?.text);
 }
 
 await runScenario();
